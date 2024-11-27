@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { ThemeProvider } from 'next-themes';
 import * as React from 'react';
 
 import '@/styles/globals.css';
@@ -50,7 +51,14 @@ export default function RootLayout({
   return (
     <html lang='en' suppressHydrationWarning>
       <body>
-        <Providers>{children}</Providers>
+        <ThemeProvider
+          attribute='class'
+          defaultTheme='system'
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Providers>{children}</Providers>
+        </ThemeProvider>
       </body>
     </html>
   );
