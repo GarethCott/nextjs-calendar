@@ -10,9 +10,34 @@ export interface Event {
   recurrence?: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'none';
   location?: string;
   attendees?: string[];
-  reminder?: number;
+  tags?: string[];
+  category?: string;
+  reminders?: {
+    type: 'email' | 'notification' | 'sms';
+    time: number;
+    message?: string;
+  }[];
+  priority?: 'low' | 'medium' | 'high';
+  url?: string;
+  attachments?: {
+    name: string;
+    url: string;
+    type: string;
+  }[];
+  weather?: {
+    temperature?: number;
+    condition?: string;
+    icon?: string;
+  };
   color?: string;
   status?: 'confirmed' | 'tentative' | 'cancelled';
+  isPrivate?: boolean;
+  lastModified?: string;
+  createdBy?: string;
+  sharedWith?: {
+    email: string;
+    permission: 'view' | 'edit' | 'admin';
+  }[];
 }
 
 export type CalendarView =
@@ -20,8 +45,9 @@ export type CalendarView =
   | 'week'
   | 'month'
   | 'year'
-  | 'schedule' // Agenda view
-  | 'workWeek'; // Monday-Friday only
+  | 'schedule'
+  | 'workWeek'
+  | 'agenda';
 
 export const eventColors = {
   work: 'bg-blue-500 dark:bg-blue-600',
@@ -36,4 +62,22 @@ export interface Calendar {
   color: string;
   isVisible: boolean;
   type: 'personal' | 'work' | 'shared' | 'holiday';
+  owner?: string;
+  sharedWith?: {
+    email: string;
+    permission: 'view' | 'edit' | 'admin';
+  }[];
+  settings?: {
+    defaultView?: CalendarView;
+    defaultReminders?: {
+      type: 'email' | 'notification' | 'sms';
+      time: number;
+    }[];
+    workingHours?: {
+      start: string;
+      end: string;
+      days: number[];
+    };
+    timezone?: string;
+  };
 }

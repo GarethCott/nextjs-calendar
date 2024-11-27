@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+import { AgendaView } from './agenda-view';
 import { CalendarView, Event, eventColors } from './types';
 
 interface CalendarGridProps {
@@ -390,6 +391,13 @@ export function CalendarGrid({
         {view === 'week' && renderWeekView()}
         {view === 'day' && renderDayView()}
         {view === 'year' && renderYearView()}
+        {view === 'agenda' && (
+          <AgendaView
+            events={events}
+            currentDate={currentDate}
+            onEventClick={onEventClick}
+          />
+        )}
       </ScrollArea>
     </div>
   );

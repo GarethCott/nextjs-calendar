@@ -9,7 +9,7 @@ import { CalendarGrid } from './calendar-grid';
 import { CalendarHeader } from './calendar-header';
 import { CalendarSidebar } from './calendar-sidebar';
 import { EventDialog } from './event-dialog';
-import { CalendarView, Event } from './types';
+import { Calendar, CalendarView, Event } from './types';
 
 const sampleEvents: Event[] = [
   {
@@ -57,9 +57,42 @@ const sampleEvents: Event[] = [
   },
 ];
 
+const sampleCalendars: Calendar[] = [
+  {
+    id: '1',
+    name: 'Work',
+    color: '#2563eb',
+    isVisible: true,
+    type: 'work',
+    settings: {
+      workingHours: {
+        start: '09:00',
+        end: '17:00',
+        days: [1, 2, 3, 4, 5], // Monday to Friday
+      },
+      timezone: 'UTC',
+    },
+  },
+  {
+    id: '2',
+    name: 'Personal',
+    color: '#16a34a',
+    isVisible: true,
+    type: 'personal',
+  },
+  {
+    id: '3',
+    name: 'Family',
+    color: '#9333ea',
+    isVisible: true,
+    type: 'shared',
+  },
+];
+
 export function MacOSCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<Event[]>(sampleEvents);
+  const [calendars] = useState<Calendar[]>(sampleCalendars);
   const [view, setView] = useState<CalendarView>('month');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -115,7 +148,6 @@ export function MacOSCalendar() {
       const daysDifference = differenceInDays(date, oldDate);
       const newTime = format(date, 'HH:mm');
 
-      // Update all recurring events by shifting them by the same number of days
       setEvents((prev) =>
         prev.map((e) => {
           if (e.id === originalEvent.id) {
@@ -131,7 +163,6 @@ export function MacOSCalendar() {
         }),
       );
     } else {
-      // For non-recurring events
       setEvents((prev) =>
         prev.map((e) => {
           if (e.id === event.id) {
@@ -199,6 +230,8 @@ export function MacOSCalendar() {
         newEvent={newEvent}
         setNewEvent={setNewEvent}
         onSubmit={handleAddEvent}
+        calendars={calendars}
+        events={events}
       />
 
       <EventDialog
@@ -210,6 +243,8 @@ export function MacOSCalendar() {
         }}
         onSave={handleEditEvent}
         onDelete={handleDeleteEvent}
+        calendars={calendars}
+        events={events}
       />
     </div>
   );
