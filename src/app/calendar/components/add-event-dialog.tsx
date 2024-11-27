@@ -1,13 +1,23 @@
 'use client';
 
 import { format, parseISO } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, X } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarUI } from '@/components/ui/calendar';
+import { Calendar } from '@/components/ui/calendar';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +44,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AttendeeManager } from './attendee-manager';
 import { ReminderSettings } from './reminder-settings';
 import { SmartScheduler } from './smart-scheduler';
-import { Calendar, Event } from './types';
+import { Calendar as CalendarType, Event } from './types';
 
 interface AddEventDialogProps {
   isOpen: boolean;
@@ -42,8 +52,9 @@ interface AddEventDialogProps {
   newEvent: Omit<Event, 'id'>;
   setNewEvent: React.Dispatch<React.SetStateAction<Omit<Event, 'id'>>>;
   onSubmit: (e: React.FormEvent) => void;
-  calendars: Calendar[];
+  calendars: CalendarType[];
   events: Event[];
+  availableTags: string[];
 }
 
 export function AddEventDialog({
@@ -52,8 +63,9 @@ export function AddEventDialog({
   newEvent,
   setNewEvent,
   onSubmit,
-  calendars,
-  events,
+  calendars = [],
+  events = [],
+  availableTags = [],
 }: AddEventDialogProps) {
   const [activeTab, setActiveTab] = React.useState('basic');
   const [requiredAttendees, setRequiredAttendees] = React.useState<string[]>(
@@ -62,6 +74,12 @@ export function AddEventDialog({
   const [optionalAttendees, setOptionalAttendees] = React.useState<string[]>(
     [],
   );
+
+  React.useEffect(() => {
+    if (!newEvent.tags) {
+      setNewEvent((prev) => ({ ...prev, tags: [] }));
+    }
+  }, [newEvent.tags, setNewEvent]);
 
   const handleTimeSelect = (startTime: Date) => {
     setNewEvent({
@@ -74,14 +92,13 @@ export function AddEventDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Only submit if we're on the basic info tab
     if (activeTab !== 'basic') {
       return;
     }
-    // Update the newEvent with attendees before submitting
     const eventWithAttendees = {
       ...newEvent,
-      attendees: [...requiredAttendees, ...optionalAttendees],
+      attendees: [...(requiredAttendees || []), ...(optionalAttendees || [])],
+      tags: newEvent.tags || [],
     };
     setNewEvent(eventWithAttendees);
     onSubmit(e);
@@ -134,7 +151,7 @@ export function AddEventDialog({
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className='w-auto p-0' align='start'>
-                        <CalendarUI
+                        <Calendar
                           mode='single'
                           selected={
                             newEvent.date ? parseISO(newEvent.date) : undefined
@@ -218,6 +235,77 @@ export function AddEventDialog({
                     setNewEvent({ ...newEvent, reminders })
                   }
                 />
+                <div>
+                  <Label>Tags</Label>
+                  <Command className='border rounded-md'>
+                    <CommandInput placeholder='Search tags...' />
+                    <CommandList>
+                      <CommandEmpty>No tags found.</CommandEmpty>
+                      <CommandGroup>
+                        {availableTags.map((tag) => {
+                          const isSelected = (newEvent.tags || []).includes(
+                            tag,
+                          );
+                          return (
+                            <CommandItem
+                              key={tag}
+                              value={tag}
+                              className='flex items-center gap-2 cursor-pointer'
+                              onSelect={() => {
+                                setNewEvent((prev) => {
+                                  const currentTags = prev.tags || [];
+                                  return {
+                                    ...prev,
+                                    tags: currentTags.includes(tag)
+                                      ? currentTags.filter((t) => t !== tag)
+                                      : [...currentTags, tag],
+                                  };
+                                });
+                              }}
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                className='pointer-events-none'
+                                onCheckedChange={() => undefined}
+                              />
+                              <span>{tag}</span>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  {newEvent.tags && newEvent.tags.length > 0 && (
+                    <div className='flex flex-wrap gap-2 mt-2'>
+                      {newEvent.tags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant='secondary'
+                          className='flex items-center gap-1'
+                        >
+                          {tag}
+                          <Button
+                            type='button'
+                            variant='ghost'
+                            size='icon'
+                            className='h-4 w-4 p-0 hover:bg-transparent'
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNewEvent((prev) => ({
+                                ...prev,
+                                tags: (prev.tags || []).filter(
+                                  (t) => t !== tag,
+                                ),
+                              }));
+                            }}
+                          >
+                            <X className='h-3 w-3' />
+                          </Button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <DialogFooter>
                   <Button type='submit'>Add Event</Button>
                 </DialogFooter>

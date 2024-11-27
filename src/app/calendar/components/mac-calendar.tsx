@@ -1,9 +1,9 @@
 'use client';
 
 import { addDays, differenceInDays, format, parseISO } from 'date-fns';
-import { useState } from 'react';
+import * as React from 'react';
 
-import { AddEventDialog } from '@/app/components/calendar/add-event-dialog';
+import { AddEventDialog } from '@/app/calendar/components/add-event-dialog';
 
 import { CalendarGrid } from './calendar-grid';
 import { CalendarHeader } from './calendar-header';
@@ -14,46 +14,30 @@ import { Calendar, CalendarView, Event } from './types';
 const sampleEvents: Event[] = [
   {
     id: '1',
-    date: '2024-11-28',
-    title: 'Digital Stand-up',
-    time: '09:00',
-    description: 'Daily team sync',
+    title: 'Team Meeting',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    time: '10:00',
     type: 'work',
-    recurrence: 'daily',
+    description: 'Weekly team sync',
+    tags: ['meeting', 'team'],
   },
   {
     id: '2',
-    date: '2024-11-28',
-    endDate: '2024-11-30',
-    title: 'Tech Conference',
-    time: '09:00',
-    description: 'Annual tech conference',
+    title: 'Project Review',
+    date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
+    time: '14:00',
     type: 'work',
+    description: 'Review Q1 project progress',
+    tags: ['meeting', 'project'],
   },
   {
     id: '3',
-    date: '2024-11-29',
-    title: 'UI Design Review',
-    time: '11:15',
-    description: 'Review latest UI mockups',
-    type: 'work',
-  },
-  {
-    id: '4',
-    date: '2024-11-30',
     title: 'Family Dinner',
+    date: format(addDays(new Date(), 2), 'yyyy-MM-dd'),
     time: '18:00',
-    description: 'Monthly family gathering',
     type: 'family',
-    recurrence: 'monthly',
-  },
-  {
-    id: '5',
-    date: '2024-11-30',
-    title: 'Project Planning',
-    time: '14:30',
-    description: 'Q4 project roadmap',
-    type: 'work',
+    description: 'Dinner with family',
+    tags: ['family', 'dinner'],
   },
 ];
 
@@ -64,14 +48,6 @@ const sampleCalendars: Calendar[] = [
     color: '#2563eb',
     isVisible: true,
     type: 'work',
-    settings: {
-      workingHours: {
-        start: '09:00',
-        end: '17:00',
-        days: [1, 2, 3, 4, 5], // Monday to Friday
-      },
-      timezone: 'UTC',
-    },
   },
   {
     id: '2',
@@ -85,26 +61,90 @@ const sampleCalendars: Calendar[] = [
     name: 'Family',
     color: '#9333ea',
     isVisible: true,
-    type: 'shared',
+    type: 'personal',
   },
 ];
 
 export function MacOSCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState<Event[]>(sampleEvents);
-  const [calendars] = useState<Calendar[]>(sampleCalendars);
-  const [view, setView] = useState<CalendarView>('month');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [isAddEventOpen, setIsAddEventOpen] = useState(false);
-  const [isEditEventOpen, setIsEditEventOpen] = useState(false);
-  const [newEvent, setNewEvent] = useState<Omit<Event, 'id'>>({
+  const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [events, setEvents] = React.useState<Event[]>(sampleEvents);
+  const [calendars, setCalendars] = React.useState<Calendar[]>(sampleCalendars);
+  const [view, setView] = React.useState<CalendarView>('month');
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [editingEvent, setEditingEvent] = React.useState<Event | null>(null);
+  const [isAddEventOpen, setIsAddEventOpen] = React.useState(false);
+  const [isEditEventOpen, setIsEditEventOpen] = React.useState(false);
+  const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
+  const [customTags, setCustomTags] = React.useState<string[]>([]);
+
+  // Initialize with some default tags if needed
+  const defaultTags = React.useMemo(
+    () => ['work', 'personal', 'important', 'meeting'],
+    [],
+  );
+
+  // Get unique tags from all events, custom tags, and default tags
+  const allTags = React.useMemo(() => {
+    const tagSet = new Set<string>([...defaultTags]);
+    events.forEach((event) => {
+      event.tags?.forEach((tag) => tagSet.add(tag));
+    });
+    customTags.forEach((tag) => tagSet.add(tag));
+    return Array.from(tagSet);
+  }, [events, customTags, defaultTags]);
+
+  const handleCalendarVisibilityChange = (
+    calendarId: string,
+    isVisible: boolean,
+  ) => {
+    setCalendars((prevCalendars) =>
+      prevCalendars.map((calendar) =>
+        calendar.id === calendarId ? { ...calendar, isVisible } : calendar,
+      ),
+    );
+  };
+
+  const handleTagSelect = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
+
+  const handleTagCreate = (newTag: string) => {
+    if (!customTags.includes(newTag)) {
+      setCustomTags((prev) => [...prev, newTag]);
+    }
+  };
+
+  // Filter events based on visible calendars and selected tags
+  const filteredEvents = events.filter((event) => {
+    // Filter by search query
+    const matchesSearch =
+      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      event.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Filter by calendar visibility
+    const calendar = calendars.find((c) => c.type === event.type);
+    const isCalendarVisible = calendar?.isVisible ?? true;
+
+    // Filter by tags
+    const matchesTags =
+      selectedTags.length === 0 ||
+      (event.tags && event.tags.some((tag) => selectedTags.includes(tag)));
+
+    return matchesSearch && isCalendarVisible && matchesTags;
+  });
+
+  const [newEvent, setNewEvent] = React.useState<Omit<Event, 'id'>>({
     date: format(currentDate, 'yyyy-MM-dd'),
     title: '',
-    time: '',
-    description: '',
+    time: format(new Date(), 'HH:mm'),
     type: 'personal',
+    description: '',
     recurrence: 'none',
+    tags: [],
+    attendees: [],
+    reminders: [],
   });
 
   const handleAddEvent = (e: React.FormEvent) => {
@@ -119,6 +159,7 @@ export function MacOSCalendar() {
       description: '',
       type: 'personal',
       recurrence: 'none',
+      tags: [],
     });
     setIsAddEventOpen(false);
   };
@@ -178,12 +219,6 @@ export function MacOSCalendar() {
     }
   };
 
-  const filteredEvents = events.filter(
-    (event) =>
-      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-
   return (
     <div className='flex flex-col h-full bg-background text-foreground'>
       <CalendarHeader
@@ -200,6 +235,12 @@ export function MacOSCalendar() {
         <CalendarSidebar
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
+          calendars={calendars}
+          onCalendarVisibilityChange={handleCalendarVisibilityChange}
+          selectedTags={selectedTags}
+          availableTags={allTags}
+          onTagSelect={handleTagSelect}
+          onTagCreate={handleTagCreate}
         />
 
         <CalendarGrid
@@ -225,6 +266,7 @@ export function MacOSCalendar() {
             description: '',
             type: 'personal',
             recurrence: 'none',
+            tags: [],
           });
         }}
         newEvent={newEvent}
@@ -232,6 +274,7 @@ export function MacOSCalendar() {
         onSubmit={handleAddEvent}
         calendars={calendars}
         events={events}
+        availableTags={allTags}
       />
 
       <EventDialog
@@ -245,6 +288,7 @@ export function MacOSCalendar() {
         onDelete={handleDeleteEvent}
         calendars={calendars}
         events={events}
+        availableTags={allTags}
       />
     </div>
   );
